@@ -1,0 +1,31 @@
+---
+description: LangGraph / LangChain patterns for the cs-email agent (official walkthrough)
+globs: **/*.py
+alwaysApply: false
+---
+
+# LangGraph (email agent)
+
+Follow the mental model and patterns from [Thinking in LangGraph](https://docs.langchain.com/oss/python/langgraph/thinking-in-langgraph) (customer support email example).
+
+## Structure
+
+- **Nodes**: one responsibility each (read/classify, search, draft, human review, send, etc.). Prefer smaller nodes when you need clearer checkpoints, retries, or observability.
+- **Routing**: use `Command` with explicit `goto` when a node chooses the next step; keep essential static edges in the graph where flow is fixed.
+- **State**: define a typed schema (e.g. `TypedDict`); store **raw** fields (email payload, classification dict, search hits, draft text). **Format prompts inside nodes**, not in state.
+
+## Human-in-the-loop and persistence
+
+- For `interrupt()`, compile the graph with a **checkpointer** so runs can pause and resume with a stable `thread_id`.
+- In any node that calls `interrupt()`, put **`interrupt()` first** — code before it re-runs on resume.
+
+## Errors
+
+- **Transient** (network, rate limits): `RetryPolicy` on the relevant nodes.
+- **LLM-recoverable**: put error context in state and route back so the model can adjust.
+- **User-fixable**: pause with `interrupt()` and resume with structured input.
+- **Unexpected**: let exceptions propagate after logging; do not blanket-swallow.
+
+## Privacy
+
+- Align with project standards: avoid logging full **email bodies** or **addresses**; redact or hash identifiers in logs and traces.

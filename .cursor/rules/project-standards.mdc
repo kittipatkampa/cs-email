@@ -1,0 +1,26 @@
+---
+description: Core project standards, safety, and agent behavior for cs-email
+alwaysApply: true
+---
+
+# cs-email — project standards
+
+## Scope
+
+Customer-support email AI assistant implemented with **LangGraph** using the [Thinking in LangGraph](https://docs.langchain.com/oss/python/langgraph/thinking-in-langgraph) pattern (nodes, typed state, `Command` routing, checkpointers for `interrupt()`). Prefer **small, focused changes** that match existing graph and node patterns.
+
+## Safety and privacy
+
+- Never log or persist **raw email bodies, headers, or addresses** unless explicitly required; prefer redacted or hashed identifiers in logs.
+- **Secrets**: load API keys and tokens only from **environment variables** or a secrets manager — never hardcode or commit them.
+- Do not commit `.env` or local credential files.
+
+## Quality bar
+
+- Prefer **explicit errors** over silent failures; surface actionable messages for operators.
+- When tests exist (`pytest`), run the relevant suite after non-trivial changes. When lint/format tools exist (`ruff`, etc.), run them before considering work done.
+- Match **imports, typing, and structure** of surrounding code.
+
+## Documentation
+
+- Update **[AGENTS.md](AGENTS.md)** when you add entrypoints, layout, or standard commands so humans and the agent stay aligned.

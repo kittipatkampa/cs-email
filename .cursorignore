@@ -1,0 +1,33 @@
+# Exclude from Cursor indexing / AI context (see https://docs.cursor.com/context/ignore-files)
+# Commit this file so the team shares the same exclusions.
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python caches and tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# Build and coverage
+build/
+dist/
+*.egg-info/
+htmlcov/
+.coverage
+.coverage.*
+
+# Local secrets (never feed to the model)
+.env
+.env.*
+!.env.example
+
+# Large or local data (adjust as the repo grows)
+*.sqlite3
+data/
+fixtures/large/

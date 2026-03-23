@@ -1,0 +1,13 @@
+---
+description: Python conventions for cs-email
+globs: **/*.py
+alwaysApply: false
+---
+
+# Python
+
+- Use **type hints** for public functions and data shapes where helpful.
+- Prefer **stdlib** or existing project dependencies over new packages without a clear need.
+- Keep modules **focused**; avoid circular imports.
+- For I/O and external APIs, make failures **explicit** (custom exceptions or structured errors) rather than bare `except:`.
+- Format with **ruff** (or project default) when configured; keep line length consistent with surrounding code.
