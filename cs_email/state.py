@@ -11,11 +11,18 @@ class EmailClassification(TypedDict):
 
 
 class EmailAgentState(TypedDict):
+    # Raw email data
     email_content: str
     sender_email: str
     email_id: str
+
+    # Classification result
     classification: EmailClassification | None
-    search_results: list[str] | None
-    customer_history: dict | None
+
+    # Raw search/API results
+    search_results: list[str] | None  # List of raw document chunks
+    customer_history: dict | None  # Raw customer data from CRM
+
+    # Generated content
     draft_response: str | None
     messages: list[str] | None
