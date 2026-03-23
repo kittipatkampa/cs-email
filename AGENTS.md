@@ -27,6 +27,8 @@ Cursor rule for graph code: [`.cursor/rules/langgraph.mdc`](.cursor/rules/langgr
 | [`cs_email/nodes.py`](cs_email/nodes.py) | Node functions (`read_email`, `classify_intent`, …) |
 | [`cs_email/graph.py`](cs_email/graph.py) | `StateGraph` wiring, `MemorySaver`, exported `app` |
 | [`tests/`](tests/) | `pytest` smoke tests (LLM calls mocked) |
+| [`scripts/manual_integration.py`](scripts/manual_integration.py) | Real Anthropic integration (optional) |
+| [`scripts/test_multiturn.py`](scripts/test_multiturn.py) | Mocked multi-turn check on one `thread_id` (no API key) |
 
 ## Commands
 
@@ -38,6 +40,7 @@ Cursor rule for graph code: [`.cursor/rules/langgraph.mdc`](.cursor/rules/langgr
 | Format (apply) | `uv run ruff format .` |
 | Format (check only) | `uv run ruff format --check .` |
 | Smoke-load compiled graph | `uv run python -m cs_email.graph` |
+| Multi-turn (mocked) | `uv run python scripts/test_multiturn.py` |
 | LangGraph CLI | Install `langgraph-cli` if needed, then run from repo root using [`langgraph.json`](langgraph.json) |
 
 Requires **Python 3.12+** (`requires-python` in [`pyproject.toml`](pyproject.toml)).

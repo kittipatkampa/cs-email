@@ -58,7 +58,7 @@ def _initial_state(args: argparse.Namespace) -> dict:
         "search_results": None,
         "customer_history": None,
         "draft_response": None,
-        "messages": None,
+        "messages": [],
     }
 
 

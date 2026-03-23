@@ -1,6 +1,7 @@
 """Graph state and classification types (raw data only; prompts are formatted in nodes)."""
 
-from typing import Literal, TypedDict
+import operator
+from typing import Annotated, Literal, TypedDict
 
 
 class EmailClassification(TypedDict):
@@ -25,4 +26,5 @@ class EmailAgentState(TypedDict):
 
     # Generated content
     draft_response: str | None
-    messages: list[str] | None
+    # Append-only log across turns (reducer: operator.add)
+    messages: Annotated[list[str], operator.add]

@@ -58,7 +58,14 @@ Provide classification including intent, urgency, topic, and summary.
     else:
         next_node = "draft_response"
 
-    return Command(update={"classification": classification}, goto=next_node)
+    cls_msg = (
+        f"Classified intent={classification['intent']}, "
+        f"urgency={classification['urgency']}, topic={classification['topic']}"
+    )
+    return Command(
+        update={"classification": classification, "messages": [cls_msg]},
+        goto=next_node,
+    )
 
 
 def search_documentation(state: EmailAgentState) -> Command[Literal["draft_response"]]:
@@ -75,7 +82,14 @@ def search_documentation(state: EmailAgentState) -> Command[Literal["draft_respo
     except SearchAPIError as e:
         search_results = [f"Search temporarily unavailable: {e!s}"]
 
-    return Command(update={"search_results": search_results}, goto="draft_response")
+    topic = classification.get("topic", "unknown")
+    return Command(
+        update={
+            "search_results": search_results,
+            "messages": [f"Searched documentation (topic: {topic})"],
+        },
+        goto="draft_response",
+    )
 
 
 def bug_tracking(state: EmailAgentState) -> Command[Literal["draft_response"]]:
@@ -83,7 +97,10 @@ def bug_tracking(state: EmailAgentState) -> Command[Literal["draft_response"]]:
     _ = state
     ticket_id = "BUG-12345"
     return Command(
-        update={"search_results": [f"Bug ticket {ticket_id} created"]},
+        update={
+            "search_results": [f"Bug ticket {ticket_id} created"],
+            "messages": [f"Bug tracking: created ticket {ticket_id}"],
+        },
         goto="draft_response",
     )
 
@@ -129,7 +146,13 @@ Guidelines:
     )
     goto: Literal["human_review", "send_reply"] = "human_review" if needs_review else "send_reply"
 
-    return Command(update={"draft_response": content}, goto=goto)
+    return Command(
+        update={
+            "draft_response": content,
+            "messages": ["Drafted response."],
+        },
+        goto=goto,
+    )
 
 
 def human_review(state: EmailAgentState) -> Command:
@@ -147,12 +170,18 @@ def human_review(state: EmailAgentState) -> Command:
 
     if human_decision.get("approved"):
         edited = human_decision.get("edited_response", state.get("draft_response", ""))
-        return Command(update={"draft_response": edited}, goto="send_reply")
-    return Command(update={}, goto=END)
+        return Command(
+            update={
+                "draft_response": edited,
+                "messages": ["Human review: approved"],
+            },
+            goto="send_reply",
+        )
+    return Command(update={"messages": ["Human review: rejected"]}, goto=END)
 
 
 def send_reply(state: EmailAgentState) -> dict:
     """Send the email response (integrate with your email service in production)."""
     draft = state.get("draft_response") or ""
     _ = draft[:100]
-    return {}
+    return {"messages": ["Sent reply."]}

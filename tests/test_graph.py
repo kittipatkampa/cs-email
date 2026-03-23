@@ -38,7 +38,7 @@ def test_question_email_routes_search_then_send(mock_get_llm: MagicMock) -> None
         "search_results": None,
         "customer_history": None,
         "draft_response": None,
-        "messages": None,
+        "messages": [],
     }
     config = {"configurable": {"thread_id": "test_thread_question"}}
     result = app.invoke(initial, config)
@@ -68,7 +68,7 @@ def test_billing_email_pauses_at_human_review(mock_get_llm: MagicMock) -> None:
         "search_results": None,
         "customer_history": None,
         "draft_response": None,
-        "messages": None,
+        "messages": [],
     }
     config = {"configurable": {"thread_id": "test_thread_billing"}}
     result = app.invoke(initial, config)
@@ -103,7 +103,7 @@ def test_bug_flow_goes_through_draft(mock_get_llm: MagicMock) -> None:
         "search_results": None,
         "customer_history": None,
         "draft_response": None,
-        "messages": None,
+        "messages": [],
     }
     config = {"configurable": {"thread_id": "test_thread_bug"}}
     result = app.invoke(initial, config)
