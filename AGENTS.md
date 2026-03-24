@@ -28,6 +28,7 @@ Cursor rule for graph code: [`.cursor/rules/langgraph.mdc`](.cursor/rules/langgr
 | [`cs_email/nodes.py`](cs_email/nodes.py) | Node functions (`read_email`, `classify_intent`, …) |
 | [`cs_email/graph.py`](cs_email/graph.py) | `StateGraph` wiring, `MemorySaver`, exported `app` |
 | [`cs_email/server.py`](cs_email/server.py) | FastAPI app: SSE streaming API for the email agent (CORS enabled for dev) |
+| [`agent-chat-ui/`](agent-chat-ui/) | Cloned [Agent Chat UI](https://github.com/langchain-ai/agent-chat-ui) (Next.js, gitignored) |
 | [`tests/`](tests/) | `pytest` smoke tests (LLM calls mocked) |
 | [`scripts/manual_integration.py`](scripts/manual_integration.py) | Real Anthropic integration (optional) |
 | [`scripts/test_multiturn.py`](scripts/test_multiturn.py) | Mocked multi-turn check on one `thread_id` (no API key) |
@@ -48,11 +49,36 @@ Cursor rule for graph code: [`.cursor/rules/langgraph.mdc`](.cursor/rules/langgr
 | SSE API server | `uv run uvicorn cs_email.server:app --reload` (or `uv run python scripts/stream_demo.py --server`) |
 | Stream demo (direct, needs API key) | `uv run python scripts/stream_demo.py` |
 | Test SSE API (needs server + `httpx`, dev extras) | `uv run python scripts/test_sse_client.py` |
-| LangGraph CLI | Install `langgraph-cli` if needed, then run from repo root using [`langgraph.json`](langgraph.json) |
+| **LangGraph dev server** | `uv run langgraph dev` (serves Platform API on `http://localhost:2024`) |
+| **Agent Chat UI** | `cd agent-chat-ui && pnpm dev` (Next.js on `http://localhost:3000`) |
 
 Requires **Python 3.12+** (`requires-python` in [`pyproject.toml`](pyproject.toml)).
+Requires **Node.js 18+** and **pnpm** for Agent Chat UI.
 
-## SSE API (frontend)
+## Agent Chat UI (recommended frontend)
+
+The primary UI uses [Agent Chat UI](https://github.com/langchain-ai/agent-chat-ui), a Next.js app that connects to the **LangGraph Platform API** served by `langgraph dev`.
+
+### Quick start
+
+1. Start the LangGraph dev server (from repo root): `uv run langgraph dev`
+2. In a second terminal: `cd agent-chat-ui && pnpm dev`
+3. Open `http://localhost:3000` and configure:
+   - **Deployment URL**: `http://localhost:2024`
+   - **Graph ID**: `cs_email`
+   - **LangSmith API key**: leave blank for local dev
+
+### Two-party interaction flow
+
+1. **Customer** types an email/query in the chat input. This becomes the graph's initial `HumanMessage`.
+2. The graph processes (read → classify → search/bug → draft). Each node emits `AIMessage`s visible in the chat.
+3. When `interrupt()` fires (billing, critical, or high-urgency emails), the UI renders the interrupt payload with an input field.
+4. **Support agent** reviews the draft in the interrupt card and types a response (`approve`/`approved`/`yes` to approve, anything else to reject).
+5. The graph resumes and sends the reply (or ends if rejected).
+
+For a production setup, separate the customer-facing and agent-facing views. This demo uses a single thread where both parties interact.
+
+## SSE API (legacy frontend)
 
 Base URL (default): `http://127.0.0.1:8000`. All stream responses use `Content-Type: text/event-stream`.
 

@@ -201,3 +201,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Agent Chat UI (cloned separately; not part of this Python project)
+agent-chat-ui/
+
+# LangGraph dev server local state
+.langgraph-data/

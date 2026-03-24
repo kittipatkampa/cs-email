@@ -8,10 +8,18 @@ import uuid
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
+from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.types import Command
 
 from cs_email.graph import build_compiled_graph
 from cs_email.server import app as fastapi_app
+
+
+def _msg_content(msg: BaseMessage | str) -> str:
+    """Extract text content from a message (BaseMessage or legacy str)."""
+    if isinstance(msg, str):
+        return msg
+    return msg.content if isinstance(msg.content, str) else str(msg.content)
 
 
 def _make_llm_mocks(classification: dict, draft_content: str = "Here is our reply.") -> MagicMock:
@@ -236,7 +244,7 @@ def test_graph_stream_updates_order(mock_get_llm: MagicMock) -> None:
         "search_results": None,
         "customer_history": None,
         "draft_response": None,
-        "messages": [],
+        "messages": [HumanMessage(content="How do I reset my password?")],
     }
     nodes_seen: list[str] = []
     for chunk in g.stream(initial, cfg, stream_mode=["updates"]):
@@ -276,10 +284,10 @@ def test_resume_uses_command(mock_get_llm: MagicMock) -> None:
         "search_results": None,
         "customer_history": None,
         "draft_response": None,
-        "messages": [],
+        "messages": [HumanMessage(content="Bill")],
     }
     r1 = g.invoke(initial, cfg)
     assert "__interrupt__" in r1
     final = g.invoke(Command(resume={"approved": True}), cfg)
     assert "__interrupt__" not in final
-    assert any("Sent reply." in m for m in (final.get("messages") or []))
+    assert any("Sent reply." in _msg_content(m) for m in (final.get("messages") or []))

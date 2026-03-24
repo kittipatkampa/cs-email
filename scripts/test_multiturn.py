@@ -11,11 +11,18 @@ from __future__ import annotations
 import sys
 from unittest.mock import MagicMock, patch
 
+from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.types import Command
 
 
+def _msg_content(msg: BaseMessage | str) -> str:
+    if isinstance(msg, str):
+        return msg
+    return msg.content if isinstance(msg.content, str) else str(msg.content)
+
+
 def _first_turn_state(*, email_content: str, email_id: str) -> dict:
-    """First invoke on a thread: seed reducer with an empty messages list."""
+    """First invoke on a thread: seed reducer with a HumanMessage."""
     return {
         "email_content": email_content,
         "sender_email": "customer@example.com",
@@ -24,12 +31,12 @@ def _first_turn_state(*, email_content: str, email_id: str) -> dict:
         "search_results": None,
         "customer_history": None,
         "draft_response": None,
-        "messages": [],
+        "messages": [HumanMessage(content=email_content)],
     }
 
 
 def _next_turn_state(*, email_content: str, email_id: str) -> dict:
-    """Later turns: omit `messages` so prior thread history is not reset."""
+    """Later turns: include a new HumanMessage so the thread sees the new email."""
     return {
         "email_content": email_content,
         "sender_email": "customer@example.com",
@@ -38,6 +45,7 @@ def _next_turn_state(*, email_content: str, email_id: str) -> dict:
         "search_results": None,
         "customer_history": None,
         "draft_response": None,
+        "messages": [HumanMessage(content=email_content)],
     }
 
 
@@ -82,13 +90,14 @@ def main() -> None:
         msgs1 = result1.get("messages") or []
         print("--- After turn 1 (messages) ---")
         for i, m in enumerate(msgs1):
-            print(f"  [{i}] {m}")
+            print(f"  [{i}] {_msg_content(m)}")
 
-        assert any("Processing email" in m for m in msgs1)
-        assert any(m.startswith("Classified intent=") for m in msgs1)
-        assert any("Searched documentation" in m for m in msgs1)
-        assert any(m == "Drafted response." for m in msgs1)
-        assert any(m == "Sent reply." for m in msgs1)
+        contents1 = [_msg_content(m) for m in msgs1]
+        assert any("Processing email" in c for c in contents1)
+        assert any(c.startswith("Classified intent=") for c in contents1)
+        assert any("Searched documentation" in c for c in contents1)
+        assert any(c == "Drafted response." for c in contents1)
+        assert any(c == "Sent reply." for c in contents1)
 
         # Turn 2: billing -> human_review -> interrupt (same thread_id)
         initial2 = _next_turn_state(
@@ -101,10 +110,11 @@ def main() -> None:
         msgs2 = result2.get("messages") or []
         print("\n--- After turn 2 invoke (interrupt; messages) ---")
         for i, m in enumerate(msgs2):
-            print(f"  [{i}] {m}")
+            print(f"  [{i}] {_msg_content(m)}")
 
         assert len(msgs2) > len(msgs1), "messages should grow across turns on the same thread"
-        assert any("turn2" in m or "charged twice" in m.lower() for m in msgs2), (
+        contents2 = [_msg_content(m) for m in msgs2]
+        assert any("charged twice" in c.lower() or "Processing email" in c for c in contents2), (
             "Turn 2 read_email should appear in messages"
         )
 
@@ -115,10 +125,13 @@ def main() -> None:
         msgs_final = final.get("messages") or []
         print("\n--- After resume (final messages) ---")
         for i, m in enumerate(msgs_final):
-            print(f"  [{i}] {m}")
+            print(f"  [{i}] {_msg_content(m)}")
 
-        assert any(m == "Human review: approved" for m in msgs_final)
-        assert msgs_final.count("Sent reply.") >= 2, "Should have sent after turn 1 and turn 2"
+        contents_final = [_msg_content(m) for m in msgs_final]
+        assert any(c == "Human review: approved" for c in contents_final)
+        assert sum(1 for c in contents_final if c == "Sent reply.") >= 2, (
+            "Should have sent after turn 1 and turn 2"
+        )
 
     print("\nAll multi-turn assertions passed.")
 

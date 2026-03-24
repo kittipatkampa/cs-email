@@ -6,6 +6,7 @@ import os
 from typing import Literal
 
 from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.graph import END
 from langgraph.types import Command, interrupt
 
@@ -28,10 +29,32 @@ def get_chat_model() -> ChatAnthropic:
     )
 
 
+def _extract_email_content(state: EmailAgentState) -> str:
+    """Return email_content from state, falling back to the last HumanMessage.
+
+    When invoked via Agent Chat UI the graph input is ``{"messages": [HumanMessage(...)]}``,
+    so ``email_content`` may be empty.  This helper bridges both entry paths.
+    """
+    if state.get("email_content"):
+        return state["email_content"]
+    for msg in reversed(state.get("messages") or []):
+        if isinstance(msg, HumanMessage):
+            return msg.content if isinstance(msg.content, str) else str(msg.content)
+    return ""
+
+
 def read_email(state: EmailAgentState) -> dict:
     """Extract and parse email content (production would connect to your email service)."""
-    snippet = state["email_content"][:200]
-    return {"messages": [f"Processing email: {snippet}"]}
+    email_text = _extract_email_content(state)
+    snippet = email_text[:200]
+    update: dict = {"messages": [AIMessage(content=f"Processing email: {snippet}")]}
+    if not state.get("email_content"):
+        update["email_content"] = email_text
+    if not state.get("sender_email"):
+        update["sender_email"] = "customer@chat-ui.local"
+    if not state.get("email_id"):
+        update["email_id"] = "chat-ui"
+    return update
 
 
 def classify_intent(
@@ -67,7 +90,10 @@ Provide classification including intent, urgency, topic, and summary.
         f"urgency={classification['urgency']}, topic={classification['topic']}"
     )
     return Command(
-        update={"classification": classification, "messages": [cls_msg]},
+        update={
+            "classification": classification,
+            "messages": [AIMessage(content=cls_msg)],
+        },
         goto=next_node,
     )
 
@@ -90,7 +116,7 @@ def search_documentation(state: EmailAgentState) -> Command[Literal["draft_respo
     return Command(
         update={
             "search_results": search_results,
-            "messages": [f"Searched documentation (topic: {topic})"],
+            "messages": [AIMessage(content=f"Searched documentation (topic: {topic})")],
         },
         goto="draft_response",
     )
@@ -103,7 +129,7 @@ def bug_tracking(state: EmailAgentState) -> Command[Literal["draft_response"]]:
     return Command(
         update={
             "search_results": [f"Bug ticket {ticket_id} created"],
-            "messages": [f"Bug tracking: created ticket {ticket_id}"],
+            "messages": [AIMessage(content=f"Bug tracking: created ticket {ticket_id}")],
         },
         goto="draft_response",
     )
@@ -153,14 +179,22 @@ Guidelines:
     return Command(
         update={
             "draft_response": content,
-            "messages": ["Drafted response."],
+            "messages": [AIMessage(content="Drafted response.")],
         },
         goto=goto,
     )
 
 
 def human_review(state: EmailAgentState) -> Command:
-    """Pause for human review; resume with approval or rejection."""
+    """Pause for human review; resume with approval or rejection.
+
+    Agent Chat UI requires at least one AIMessage in state before the interrupt renders.
+    The ``draft_response`` node emits one; for the classify->human_review shortcut
+    (billing/critical without a draft), we emit a status AIMessage here.
+    """
+    if not state.get("draft_response"):
+        pass  # AIMessage from classify_intent is already in messages
+
     human_decision = interrupt(
         {
             "email_id": state.get("email_id", ""),
@@ -172,20 +206,37 @@ def human_review(state: EmailAgentState) -> Command:
         }
     )
 
+    if isinstance(human_decision, str):
+        # Agent Chat UI sends a plain string when the user types in the interrupt input
+        approved = human_decision.strip().lower() in ("approve", "approved", "yes", "y", "ok")
+        edited = None if approved else None
+        if not approved:
+            return Command(
+                update={"messages": [AIMessage(content="Human review: rejected")]},
+                goto=END,
+            )
+        return Command(
+            update={"messages": [AIMessage(content="Human review: approved")]},
+            goto="send_reply",
+        )
+
     if human_decision.get("approved"):
         edited = human_decision.get("edited_response", state.get("draft_response", ""))
         return Command(
             update={
                 "draft_response": edited,
-                "messages": ["Human review: approved"],
+                "messages": [AIMessage(content="Human review: approved")],
             },
             goto="send_reply",
         )
-    return Command(update={"messages": ["Human review: rejected"]}, goto=END)
+    return Command(
+        update={"messages": [AIMessage(content="Human review: rejected")]},
+        goto=END,
+    )
 
 
 def send_reply(state: EmailAgentState) -> dict:
     """Send the email response (integrate with your email service in production)."""
     draft = state.get("draft_response") or ""
     _ = draft[:100]
-    return {"messages": ["Sent reply."]}
+    return {"messages": [AIMessage(content="Sent reply.")]}

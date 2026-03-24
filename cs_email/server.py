@@ -1,4 +1,9 @@
-"""FastAPI server exposing the email agent as an SSE stream for frontend clients."""
+"""FastAPI server exposing the email agent as an SSE stream for frontend clients.
+
+The custom SSE API (``/email/stream``, ``/email/resume``) is kept for backwards
+compatibility.  For the Agent Chat UI, use ``langgraph dev`` instead — it exposes
+the standard LangGraph Platform API that the UI connects to.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +16,7 @@ from typing import Any
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
@@ -52,7 +58,11 @@ class ResumeRequest(BaseModel):
 
 
 def _json_default(obj: Any) -> Any:
-    """Fallback for json.dumps; avoid leaking raw email bodies in error paths."""
+    """Fallback for json.dumps; serialise LangChain messages and other non-JSON types."""
+    from langchain_core.messages import BaseMessage
+
+    if isinstance(obj, BaseMessage):
+        return {"type": obj.type, "content": obj.content}
     return str(obj)
 
 
@@ -135,7 +145,7 @@ def stream_email(req: EmailRequest) -> EventSourceResponse:
         "search_results": None,
         "customer_history": None,
         "draft_response": None,
-        "messages": [],
+        "messages": [HumanMessage(content=req.email_content)],
     }
     return EventSourceResponse(_iter_sse_chunks(initial_state, config, thread_id))
 

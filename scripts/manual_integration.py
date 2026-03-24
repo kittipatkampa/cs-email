@@ -29,6 +29,7 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
+from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 
 
@@ -58,7 +59,7 @@ def _initial_state(args: argparse.Namespace) -> dict:
         "search_results": None,
         "customer_history": None,
         "draft_response": None,
-        "messages": [],
+        "messages": [HumanMessage(content=args.email)],
     }
 
 

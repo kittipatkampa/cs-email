@@ -1,7 +1,9 @@
 """Graph state and classification types (raw data only; prompts are formatted in nodes)."""
 
-import operator
 from typing import Annotated, Literal, TypedDict
+
+from langchain_core.messages import AnyMessage
+from langgraph.graph.message import add_messages
 
 
 class EmailClassification(TypedDict):
@@ -26,5 +28,5 @@ class EmailAgentState(TypedDict):
 
     # Generated content
     draft_response: str | None
-    # Append-only log across turns (reducer: operator.add)
-    messages: Annotated[list[str], operator.add]
+    # Chat messages visible in Agent Chat UI (LangChain message types, add_messages reducer)
+    messages: Annotated[list[AnyMessage], add_messages]
