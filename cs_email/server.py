@@ -31,7 +31,9 @@ def _load_env() -> None:
 
 _load_env()
 
-from cs_email.graph import app as compiled_graph  # noqa: E402 — after load_dotenv for API keys
+from cs_email.graph import build_compiled_graph  # noqa: E402 — after load_dotenv for API keys
+
+compiled_graph = build_compiled_graph()
 
 app = FastAPI(title="cs-email", version="0.1.0")
 

@@ -1,4 +1,13 @@
-"""Compile the customer-support email LangGraph."""
+"""Compile the customer-support email LangGraph.
+
+``app`` is exported **without** a checkpointer so ``langgraph dev`` (which
+provides its own persistence) can load it via ``langgraph.json``.
+
+Use ``build_compiled_graph()`` when you need a standalone graph with an
+in-memory checkpointer (custom SSE server, tests, scripts).
+"""
+
+from __future__ import annotations
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -16,8 +25,8 @@ from cs_email.nodes import (
 from cs_email.state import EmailAgentState
 
 
-def build_compiled_graph():
-    """Build and compile the graph with an in-memory checkpointer."""
+def _build_workflow() -> StateGraph:
+    """Return the (uncompiled) StateGraph with all nodes and edges."""
     workflow = StateGraph(EmailAgentState)
 
     workflow.add_node("read_email", read_email)
@@ -36,11 +45,21 @@ def build_compiled_graph():
     workflow.add_edge("read_email", "classify_intent")
     workflow.add_edge("send_reply", END)
 
-    memory = MemorySaver()
-    return workflow.compile(checkpointer=memory)
+    return workflow
 
 
-app = build_compiled_graph()
+def build_compiled_graph():
+    """Build and compile the graph with an in-memory checkpointer.
+
+    Used by the custom SSE server, tests, and scripts that run outside
+    the LangGraph Platform.
+    """
+    return _build_workflow().compile(checkpointer=MemorySaver())
+
+
+# Exported for langgraph.json → ``langgraph dev``.
+# No checkpointer: the LangGraph Platform provides its own persistence.
+app = _build_workflow().compile()
 
 
 if __name__ == "__main__":
