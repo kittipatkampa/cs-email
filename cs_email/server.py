@@ -5,15 +5,27 @@ from __future__ import annotations
 import json
 import uuid
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
-from cs_email.graph import app as compiled_graph
+
+def _load_env() -> None:
+    """Load `.env` from repo root so `ANTHROPIC_API_KEY` is set when uvicorn imports this app."""
+    repo_root = Path(__file__).resolve().parent.parent
+    load_dotenv(repo_root / ".env")
+    load_dotenv()
+
+
+_load_env()
+
+from cs_email.graph import app as compiled_graph  # noqa: E402 — after load_dotenv for API keys
 
 app = FastAPI(title="cs-email", version="0.1.0")
 

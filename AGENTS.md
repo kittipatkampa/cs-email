@@ -32,6 +32,7 @@ Cursor rule for graph code: [`.cursor/rules/langgraph.mdc`](.cursor/rules/langgr
 | [`scripts/manual_integration.py`](scripts/manual_integration.py) | Real Anthropic integration (optional) |
 | [`scripts/test_multiturn.py`](scripts/test_multiturn.py) | Mocked multi-turn check on one `thread_id` (no API key) |
 | [`scripts/stream_demo.py`](scripts/stream_demo.py) | Direct `graph.stream()` to stdout, or `--server` to run the SSE API |
+| [`scripts/test_sse_client.py`](scripts/test_sse_client.py) | HTTP client to exercise `/email/stream` and `/email/resume` against a running server |
 
 ## Commands
 
@@ -46,6 +47,7 @@ Cursor rule for graph code: [`.cursor/rules/langgraph.mdc`](.cursor/rules/langgr
 | Multi-turn (mocked) | `uv run python scripts/test_multiturn.py` |
 | SSE API server | `uv run uvicorn cs_email.server:app --reload` (or `uv run python scripts/stream_demo.py --server`) |
 | Stream demo (direct, needs API key) | `uv run python scripts/stream_demo.py` |
+| Test SSE API (needs server + `httpx`, dev extras) | `uv run python scripts/test_sse_client.py` |
 | LangGraph CLI | Install `langgraph-cli` if needed, then run from repo root using [`langgraph.json`](langgraph.json) |
 
 Requires **Python 3.12+** (`requires-python` in [`pyproject.toml`](pyproject.toml)).
@@ -70,6 +72,8 @@ Base URL (default): `http://127.0.0.1:8000`. All stream responses use `Content-T
 - `error` — JSON `{"error":"..."}`.
 
 **CORS**: `allow_origins=["*"]` for development; restrict in production.
+
+The FastAPI app loads **`.env`** from the **repository root** on import (same pattern as other scripts), so `ANTHROPIC_API_KEY` is available when you run `uvicorn` or `scripts/stream_demo.py --server`.
 
 ## Environment variables
 

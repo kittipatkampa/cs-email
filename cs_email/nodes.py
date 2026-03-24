@@ -17,10 +17,14 @@ class SearchAPIError(Exception):
 
 
 def get_chat_model() -> ChatAnthropic:
-    """Return the chat model (patch in tests)."""
+    """Return the chat model (patch in tests).
+
+    ``streaming=True`` so LangGraph ``stream_mode="messages"`` receives token chunks (SSE + UI).
+    """
     return ChatAnthropic(
         model=os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
         temperature=0,
+        streaming=True,
     )
 
 
